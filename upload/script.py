@@ -1,17 +1,17 @@
-import os
 from google.cloud import storage
+import os
 
 # Set up Google Cloud credentials and project ID
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/path/to/credentials.json"
-project_id = "your-project-id"
+project_id = "pngocr-377813"
 
-# Set up Google Cloud client objects
-storage_client = storage.Client(project=project_id)
+client = storage.Client()
+bucket = client.bucket(project_id)
 
-# Upload a PNG file to a Google Cloud Storage bucket
-bucket_name = "your-bucket-name"
-local_file_path = "/path/to/local/file.png"
-remote_file_name = "remote_file_name.png"
-bucket = storage_client.bucket(bucket_name)
-blob = bucket.blob(remote_file_name)
-blob.upload_from_filename(local_file_path)
+directory = '/Users/e-pgsa/Desktop/sanatize'
+# Iterate over the PNG files in the directory and upload each one
+for filename in os.listdir(directory):
+    if filename.endswith('.png'):
+        filepath = os.path.join(directory, filename)
+        blob = bucket.blob(filename)
+        blob.upload_from_filename(filepath)
+        print(f'Uploaded {filename} to {bucket.name}')
