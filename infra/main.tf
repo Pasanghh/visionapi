@@ -4,6 +4,7 @@ provider "google" {
   region      = var.region
 }
 
+# Create a bucket for image storage
 resource "google_storage_bucket" "screenshots_bucket" {
   name          = var.bucket
   location      = var.region
@@ -12,20 +13,18 @@ resource "google_storage_bucket" "screenshots_bucket" {
   uniform_bucket_level_access = true
 }
 
+# Create service account for the bucket
 resource "google_service_account" "bucket_sa" {
   account_id   = "${google_storage_bucket.screenshots_bucket.id}"
   display_name = "bucket sa"
 }
 
-resource "google_project_service" "vision_api" {
-  service = "vision.googleapis.com"
-}
-
+# Bind visionai editior to service account
 resource "google_project_iam_binding" "vision_api" {
   project = var.project
   role = "roles/visionai.editor"
   members = [
-    "serviceAccount:screenshots-bucket-3336@pngocr-377813.iam.gserviceaccount.com",
+    "serviceAccount:${google_storage_bucket.screenshots_bucket.name}@pngocr-377813.iam.gserviceaccount.com",
   ]
 }
 
