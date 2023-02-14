@@ -1,22 +1,24 @@
 provider "google" {
-#  credentials = file("/path/to/credentials.json")
   project     = var.project
   region      = var.region
 }
 
 # Create a bucket for image storage
 resource "google_storage_bucket" "screenshots_bucket" {
-  name          = var.bucket
+  name          = var.image_bucket
   location      = var.region
   force_destroy = true
 
   uniform_bucket_level_access = true
 }
 
-# Create service account for the bucket
-resource "google_service_account" "bucket_sa" {
-  account_id   = "${google_storage_bucket.screenshots_bucket.id}"
-  display_name = "bucket sa"
+# Create a bucket for result text storage
+resource "google_storage_bucket" "result_text_bucket" {
+  name          = var.text_bucket
+  location      = var.region
+  force_destroy = true
+
+  uniform_bucket_level_access = true
 }
 
 # Bind visionai editior to service account
@@ -34,9 +36,9 @@ resource "google_service_account" "vision_api_sa" {
   display_name = "Cloud Vision API Service Account"
 }
 
-# Grant the Cloud Vision API service account access to the bucket
-resource "google_storage_bucket_iam_member" "bucket_iam" {
-  bucket = google_storage_bucket.bucket.name
+# Grant the Cloud Vision API service account access to the image bucket
+resource "google_storage_bucket_iam_member" "image_bucket_iam" {
+  bucket = var.image_bucket
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_service_account.vision_api_sa.email}"
 }
@@ -56,5 +58,6 @@ resource "google_service_account_key" "vision_api_key" {
 output "vision_api_key" {
   value       = google_service_account_key.vision_api_key.private_key
   description = "Cloud Vision API API key"
+  sensitive = true
 }
 
