@@ -1,8 +1,3 @@
-# Enable the Cloud Function API for the project
-resource "google_project_service" "cloud_function_api" {
-  service = "cloudfunctions.googleapis.com"
-}
-
 data "google_storage_project_service_account" "gcs_account" {
 }
 
@@ -41,6 +36,7 @@ resource "google_project_iam_member" "artifactregistry-reader" {
   depends_on = [google_project_iam_member.event-receiving]
 
 }
+
 # Create image processing function 
 resource "google_cloudfunctions2_function" "image_function" {
   name        = var.image_function
@@ -58,7 +54,7 @@ resource "google_cloudfunctions2_function" "image_function" {
 
     source {
       storage_source {
-        bucket = google_storage_bucket.function_bucket.name
+        bucket = var.function_bucket
         object = "function.zip"
       }
     }
@@ -75,7 +71,6 @@ resource "google_cloudfunctions2_function" "image_function" {
   }
 }
 
-
 # Create text translate function 
 resource "google_cloudfunctions2_function" "translate_function" {
   name        = var.translate_function
@@ -83,8 +78,10 @@ resource "google_cloudfunctions2_function" "translate_function" {
   description = "Function used to translate text from images"
 
   event_trigger {
-    event_type   = "google.cloud.pubsub.topic.v1.messagePublished"
-    pubsub_topic = google_pubsub_topic.result_topic.name
+    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic   = google_pubsub_topic.result_topic.id
+    trigger_region = var.region
+    retry_policy   = "RETRY_POLICY_RETRY"
   }
 
   build_config {
@@ -95,13 +92,12 @@ resource "google_cloudfunctions2_function" "translate_function" {
     }
     source {
       storage_source {
-        bucket = google_storage_bucket.function_bucket.name
+        bucket = var.function_bucket
         object = "function.zip"
       }
     }
   }
 }
-
 
 # Create save text function 
 resource "google_cloudfunctions2_function" "save_function" {
@@ -124,25 +120,31 @@ resource "google_cloudfunctions2_function" "save_function" {
   }
 
   event_trigger {
-    event_type   = "google.cloud.pubsub.topic.v1.messagePublished"
-    pubsub_topic = google_pubsub_topic.result_topic.name
+    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic   = google_pubsub_topic.result_topic.id
+    trigger_region = var.region
+    retry_policy   = "RETRY_POLICY_RETRY"
   }
 
 }
 
+# # Create a zip file containing the Cloud Function code
+# data "archive_file" "function_zip" {
+#   type = "python"
 
-# Create a zip file containing the Cloud Function code
-data "archive_file" "function_zip" {
-  type = "zip"
+#   source_file = "/Users/e-pgsa/visionapi/upload/main.py"
+#   output_path = "main.py"
+# }
 
-  source_file = "/Users/e-pgsa/visionapi/upload/textreader.py"
-  output_path = "function.zip"
-}
+# Create a local file
+# resource "local_file" "example" {
+#   filename = "/Users/e-pgsa/visionapi/upload/main.py"
+# }
 
-# Upload the zip file to the Cloud Storage bucket
-resource "google_storage_bucket_object" "function_zip" {
-  name   = "function.zip"
-  bucket = google_storage_bucket.function_bucket.name
+# # Upload the local file to the Cloud Storage bucket
+# resource "google_storage_bucket_object" "function_zip" {
+#   name   = "main.py"
+#   bucket = google_storage_bucket.function_bucket.name
 
-  source = data.archive_file.function_zip.output_path
-}
+#   source = local_file.example.filename
+# }

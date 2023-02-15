@@ -30,19 +30,19 @@ variable "function_bucket" {
 
 variable "image_function" {
   type        = string
-  default     = "image-3336435"
+  default     = "image-function"
   description = "Function used to detect text from images"
 }
 
 variable "translate_function" {
   type        = string
-  default     = "translate-3336435"
+  default     = "translate-function"
   description = "Function used to translate text from images"
 }
 
 variable "save_function" {
   type        = string
-  default     = "save-3336435"
+  default     = "save-function"
   description = "Function used to save text to GCS bucket"
 }
 variable "function_runtime" {
