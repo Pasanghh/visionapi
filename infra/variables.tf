@@ -22,21 +22,27 @@ variable "text_bucket" {
   description = "Bucket used to store txt files"
 }
 
+variable "function_bucket" {
+  type        = string
+  default     = "function-bucket-3336"
+  description = "Bucket used to store the python fucntion script"
+}
+
 variable "image_function" {
   type        = string
-  default     = "image-function-3336"
+  default     = "image-3336435"
   description = "Function used to detect text from images"
 }
 
 variable "translate_function" {
   type        = string
-  default     = "translate-function-3336"
+  default     = "translate-3336435"
   description = "Function used to translate text from images"
 }
 
 variable "save_function" {
   type        = string
-  default     = "save-function-3336"
+  default     = "save-3336435"
   description = "Function used to save text to GCS bucket"
 }
 variable "function_runtime" {
