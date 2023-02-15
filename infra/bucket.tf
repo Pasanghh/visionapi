@@ -1,4 +1,3 @@
-
 # Create a bucket for image storage
 resource "google_storage_bucket" "screenshots_bucket" {
   name          = var.image_bucket

@@ -8,25 +8,55 @@ resource "google_cloudfunctions_function" "image_function" {
     event_type = "google.storage.object.finalize"
     resource   = google_storage_bucket.screenshots_bucket.self_link
   }
-
+  
   available_memory_mb   = 256
   source_archive_bucket = google_storage_bucket.screenshots_bucket.id
   timeout               = 60
   entry_point           = "Image Processing"
 
   environment_variables = {
-    TRANSLATE_TOPIC = "translatetopic"
-    RESULT_TOPIC    = "resulttopic"
+    TRANSLATE_TOPIC = google_pubsub_topic.translate_topic.name
+    RESULT_TOPIC    = google_pubsub_topic.result_topic.name
     TO_LANG         = "es,en,fr,ja"
   }
 }
 
-# IAM entry for a single user to invoke the function
-resource "google_cloudfunctions_function_iam_member" "invoker" {
-  project        = google_cloudfunctions_function.function.project
-  region         = google_cloudfunctions_function.function.region
-  cloud_function = google_cloudfunctions_function.function.name
+# Create text translate function 
+resource "google_cloudfunctions_function" "translate_function" {
+  name        = var.translate_function
+  description = "Function used to translate text from images"
+  runtime     = var.function_runtime
 
-  role   = "roles/cloudfunctions.invoker"
-  member = "user:myFunctionInvoker@example.com"
+  event_trigger {
+    event_type = "google_pubsub_topic.result_topic.publish"
+    resource = google_pubsub_topic.result_topic.name
+  }
+  
+  available_memory_mb   = 256
+  timeout               = 60
+  entry_point           = "Translate Text"
+
+  environment_variables = {
+    RESULT_TOPIC    = google_pubsub_topic.result_topic.name
+  }
+}
+
+# Create save text function 
+resource "google_cloudfunctions_function" "save_function" {
+  name        = var.save_function
+  description = "Function used to save text into GCS bucket"
+  runtime     = var.function_runtime
+
+  event_trigger {
+    event_type = "google_pubsub_topic.translate_topic.publish"
+    resource = google_pubsub_topic.translate_topic.name
+  }
+  
+  available_memory_mb   = 256
+  timeout               = 60
+  entry_point           = "Save Text"
+
+  environment_variables = {
+    result_text_bucket = google_storage_bucket.result_text_bucket.name
+  }
 }

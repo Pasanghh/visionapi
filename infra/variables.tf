@@ -28,6 +28,17 @@ variable "image_function" {
   description = "Function used to detect text from images"
 }
 
+variable "translate_function" {
+  type        = string
+  default     = "translate-function-3336"
+  description = "Function used to translate text from images"
+}
+
+variable "save_function" {
+  type        = string
+  default     = "save-function-3336"
+  description = "Function used to save text to GCS bucket"
+}
 variable "function_runtime" {
   type        = string
   default     = "python39"
@@ -37,5 +48,11 @@ variable "function_runtime" {
 variable "translate_topic" {
   type        = string
   default     = "translatetopic"
-  description = "Pub/Sub topic used to trigger the processing"
+  description = "Pub/Sub topic used to trigger the translate function"
+}
+
+variable "result_topic" {
+  type        = string
+  default     = "resulttopic"
+  description = "Pub/Sub topic used to trigger the save text function"
 }
