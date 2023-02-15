@@ -27,6 +27,6 @@ resource "google_service_account_key" "vision_api_key" {
 output "vision_api_key" {
   value       = google_service_account_key.vision_api_key.private_key
   description = "Cloud Vision API API key"
-  sensitive = true
+  sensitive   = true
 }
 
