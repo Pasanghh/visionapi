@@ -22,54 +22,30 @@ resource "google_project_iam_member" "invoking" {
   depends_on = [google_project_iam_member.gcs-pubsub-publishing]
 }
 
-resource "google_project_iam_member" "event-receiving" {
-  project    = var.project
-  role       = "roles/eventarc.eventReceiver"
-  member     = "serviceAccount:${google_service_account.account.email}"
-  depends_on = [google_project_iam_member.invoking]
-}
-
-resource "google_project_iam_member" "artifactregistry-reader" {
-  project    = var.project
-  role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${google_service_account.account.email}"
-  depends_on = [google_project_iam_member.event-receiving]
-
-}
-
 # Create image processing function 
-resource "google_cloudfunctions2_function" "image_function" {
+resource "google_cloudfunctions_function" "image_function" {
   name        = var.image_function
-  location    = var.region
   description = "Function used to detect text from images"
+  runtime     = var.function_runtime
 
-  build_config {
-    runtime     = var.function_runtime
-    entry_point = "process_image"
-    environment_variables = {
-      TRANSLATE_TOPIC = google_pubsub_topic.translate_topic.name
-      RESULT_TOPIC    = google_pubsub_topic.result_topic.name
-      TO_LANG         = "es,en,fr,ja"
-    }
-
-    source {
-      storage_source {
-        bucket = var.function_bucket
-        object = "function.zip"
-      }
-    }
+  entry_point = "process_image"
+  environment_variables = {
+    GCP_PROJECT     = var.project
+    TRANSLATE_TOPIC = google_pubsub_topic.translate_topic.name
+    RESULT_TOPIC    = google_pubsub_topic.result_topic.name
+    TO_LANG         = "es,en,fr,ja"
   }
+
+  source_archive_bucket = var.function_bucket
+  source_archive_object = "main.py"
+
 
   event_trigger {
-    event_type            = "google.cloud.storage.object.v1.finalized"
-    retry_policy          = "RETRY_POLICY_RETRY"
-    service_account_email = google_service_account.account.email
-    event_filters {
-      attribute = "bucket"
-      value     = var.image_bucket
-    }
+    event_type = "google.storage.object.finalize"
+    resource   = google_storage_bucket.screenshots_bucket.name
   }
 }
+
 
 # Create text translate function 
 resource "google_cloudfunctions2_function" "translate_function" {
@@ -89,11 +65,12 @@ resource "google_cloudfunctions2_function" "translate_function" {
     entry_point = "translate_text"
     environment_variables = {
       RESULT_TOPIC = google_pubsub_topic.result_topic.name
+      GCP_PROJECT  = var.project
     }
     source {
       storage_source {
         bucket = var.function_bucket
-        object = "function.zip"
+        object = "main.py"
       }
     }
   }
@@ -110,11 +87,12 @@ resource "google_cloudfunctions2_function" "save_function" {
     entry_point = "save_result"
     environment_variables = {
       RESULT_BUCKET = "${var.text_bucket}"
+      GCP_PROJECT   = var.project
     }
     source {
       storage_source {
         bucket = var.function_bucket
-        object = "function.zip"
+        object = "main.py"
       }
     }
   }
@@ -128,23 +106,24 @@ resource "google_cloudfunctions2_function" "save_function" {
 
 }
 
-# # Create a zip file containing the Cloud Function code
-# data "archive_file" "function_zip" {
-#   type = "python"
+resource "google_storage_bucket_object" "app" {
+  name   = "main.py"
+  source = "/Users/e-pgsa/visionapi/upload/app/main.py"
+  bucket = var.function_bucket
+}
 
-#   source_file = "/Users/e-pgsa/visionapi/upload/main.py"
-#   output_path = "main.py"
-# }
+# # # Create a zip file containing the Cloud Function code
+# # data "archive_file" "function_zip" {
+# #   type = "zip"
 
-# Create a local file
-# resource "local_file" "example" {
-#   filename = "/Users/e-pgsa/visionapi/upload/main.py"
-# }
+# #   source_file = "/Users/e-pgsa/visionapi/upload/main.py"
+# #   output_path = "function.zip"
+# # }
 
-# # Upload the local file to the Cloud Storage bucket
-# resource "google_storage_bucket_object" "function_zip" {
-#   name   = "main.py"
-#   bucket = google_storage_bucket.function_bucket.name
+# # # Upload the local file to the Cloud Storage bucket
+# # resource "google_storage_bucket_object" "function_zip" {
+# #   name   = "function.zip"
+# #   bucket = google_storage_bucket.function_bucket.name
 
-#   source = local_file.example.filename
-# }
+# #   source = data.archive_file.function_zip.output_path
+# # }
